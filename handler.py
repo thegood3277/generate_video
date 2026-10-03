@@ -96,7 +96,12 @@ def queue_prompt(prompt):
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
     req = urllib.request.Request(url, data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+    try:
+        return json.loads(urllib.request.urlopen(req).read())
+    except urllib.error.HTTPError as e:
+        # ComfyUI explains in the response body why it rejected the workflow
+        detail = e.read().decode('utf-8', errors='replace')
+        raise Exception(f"ComfyUI rejected the workflow (HTTP {e.code}): {detail}") from e
 
 def get_image(filename, subfolder, folder_type):
     url = f"http://{server_address}:8188/view"
