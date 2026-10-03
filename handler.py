@@ -212,6 +212,30 @@ def filter_user_loras(lora_pairs):
     
     return filtered
 
+def insert_flf2v_loras(prompt, lora_pairs):
+    """
+    The FLF2V workflow has no user LoRA nodes, so chain them in here:
+    HIGH: lightx2v(283) -> user LoRAs -> TorchCompile(391)
+    LOW:  lightx2v(284) -> user LoRAs -> TorchCompile(390)
+    """
+    for side, source, consumer in (("high", "283", "391"), ("low", "284", "390")):
+        for i, lora_pair in enumerate(lora_pairs):
+            if not lora_pair.get(side):
+                continue
+            strength = lora_pair.get(f"{side}_weight", 1.0)
+            node_id = get_next_available_node_id(prompt)
+            prompt[node_id] = {
+                "class_type": "LoraLoaderModelOnly",
+                "inputs": {
+                    "lora_name": lora_pair[side],
+                    "strength_model": strength,
+                    "model": [source, 0],
+                },
+            }
+            source = node_id
+            logger.info(f"✅ {side.upper()} LoRA {i+1} 적용: {lora_pair[side]} (강도: {strength}) -> 노드 {node_id}")
+        prompt[consumer]["inputs"]["model"] = [source, 0]
+
 def apply_loras_to_workflow(prompt, lora_pairs, is_flf2v, workflow_file):
     """
     워크플로우에 LoRA 설정을 적용하는 함수
@@ -226,7 +250,11 @@ def apply_loras_to_workflow(prompt, lora_pairs, is_flf2v, workflow_file):
     """
     if not lora_pairs:
         return
-    
+
+    if is_flf2v:
+        insert_flf2v_loras(prompt, lora_pairs[:4])
+        return
+
     # 각 workflow 파일별 사용자 LoRA 노드 ID 매핑 (HIGH, LOW 순서)
     # 체인 구조: 
     # HIGH: UNETLoader(230) -> lightx2v(283) -> 사용자LoRA(282) -> 사용자LoRA(339) -> 사용자LoRA(340) -> 사용자LoRA(341) -> TorchCompile(391)
@@ -413,6 +441,9 @@ def handler(job):
     prompt["848"]["inputs"]["value"] = adjusted_height
     # Length: 노드 846
     prompt["846"]["inputs"]["value"] = length
+    # Seed: 노드 835 (without one, the seed stored in the workflow is used)
+    if "seed" in job_input:
+        prompt["835"]["inputs"]["noise_seed"] = int(job_input["seed"])
     
     # FLF2V 전용 설정
     if is_flf2v:
