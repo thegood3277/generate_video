@@ -7,17 +7,17 @@ RUN pip install runpod websocket-client
 
 WORKDIR /
 
-# ComfyUI and the custom nodes are pinned to their state of 2026-02-20, when the
+# ComfyUI and the custom nodes are pinned to their state of 2026-02-21, when the
 # workflows in workflow/ were made, so a rebuild cannot change them underneath.
 RUN git clone https://github.com/Comfy-Org/ComfyUI.git && \
     cd /ComfyUI && \
-    git checkout b254cecd032e872766965415d120973811e9e360 && \
+    git checkout f394af8d0fd03ec1aad6049e4a40344cd09aba4e && \
     pip install -r requirements.txt
 
 RUN cd /ComfyUI/custom_nodes && \
     git clone https://github.com/Comfy-Org/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
-    git checkout 3409ad6c3ef25d492b896f6fd96460e8eb611d29 && \
+    git checkout eb12e015d5420d38176d2df9cee62c6cdd9e55d4 && \
     pip install -r requirements.txt
 
 RUN cd /ComfyUI/custom_nodes && \
@@ -29,7 +29,7 @@ RUN cd /ComfyUI/custom_nodes && \
 RUN cd /ComfyUI/custom_nodes && \
     git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && \
     cd ComfyUI-Frame-Interpolation && \
-    git checkout b1fd5a433a972cf9f7f672b2fe950cbb06c4e629
+    git checkout a969c01dbccd9e5510641be04eb51fe93f6bfc3d
 
 RUN cd /ComfyUI/custom_nodes/ComfyUI-Frame-Interpolation && \
     python install.py
